@@ -1,0 +1,109 @@
+---
+title: "Markdown & knitr"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+
+library(doBy)
+library(timeDate)
+library(dplyr)
+
+library(datasets)
+library(lattice)
+library(ggplot2)
+
+knitr::opts_chunk$set(echo = TRUE )
+```
+
+
+1.Code for reading in the dataset and/or processing the data
+& 2. Histogram of the total number of steps taken each day
+```{r histG, echo=TRUE}
+activity <- read.csv("activity.csv", header=T)
+
+act <- subset(activity, select=c("date","steps"))
+grp <- group_by(act, date)
+step <- summarise(grp, day_step=sum(steps))
+
+hist(step$day_step, breaks=20,xlab="No. Steps Taken",main="Histogram Total Number of Steps Taken each Day")
+rug(step$day_step)  
+```
+
+3. Mean and median number of steps taken each day
+```{r, MeanMedian}
+step[is.na(step)] <- 0
+
+mean(step$day_step)
+
+median (step$day_step)
+```
+
+
+4. Time series plot of the average number of steps taken
+
+
+
+```{r AverageNoSteps, echo=TRUE}
+
+mean_step <- summarise(grp, steps=mean(steps))
+xyplot(steps~date, mean_step)
+
+
+```
+
+5. The 5-minute interval that, on average, contains the maximum number of steps
+
+```{r maxInt, echo=TRUE}
+activity[is.na(activity)] <- 0
+
+five <- group_by (activity, interval)
+f <- summarise(five, step=mean(steps))
+head(arrange(f, desc(step)),1)$interval
+# head(arrange(f, desc(step)),1)$step # no. steps
+```
+
+
+6.Code to describe and show a strategy for imputing missing data
+```{r impute}
+activity[is.na(activity)] <- 0
+
+```
+7.Histogram of the total number of steps taken each day after missing values are imputed
+```{r ImputedHistogram, echo=TRUE}
+
+act <- subset(activity, select=c("date","steps"))
+
+
+grp <- group_by(act, date)
+step <- summarise(grp, day_step=sum(steps))
+
+
+hist(step$day_step, breaks=20,xlab="No. Steps Taken",main="Histogram Total Number of Steps Taken each Day")
+rug(step$day_step) 
+
+
+```
+
+8.Panel plot comparing the average number of steps taken per 5-minute interval across weekdays and weekends
+```{r WeekDayEnd}
+wk <- activity
+wk$type <- isWeekday(wk$date)
+
+wk_wk <- subset (wk, type=="TRUE")
+wk_wk <- group_by(wk_wk, interval)
+wk_wk <- summarise (wk_wk, steps=mean(steps))
+wk_wk$day_type <- "WeekDay"
+
+wk_end <- subset (wk, type=="FALSE")
+wk_end <- group_by(wk_end, interval)
+wk_end <- summarise (wk_end, steps=mean(steps))
+wk_end$day_type <- "WeekEnd"
+
+
+five <- arrange(rbind(wk_wk,wk_end),interval,day_type)
+qplot(interval, steps, data=five, color=day_type, geom = c( "point","smooth"))
+
+```
+
+
